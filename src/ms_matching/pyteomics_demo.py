@@ -34,6 +34,7 @@ if not filtered_peptides:
 # ============================
 #peptide = filtered_peptides[0][0]
 #I previously had the line above but got an error so I removed it and added the line below
+#I changed the line 
 peptide, peptide_mass = filtered_peptides[0]
 aa_masses = mass.std_aa_mass
 b_ions = []
@@ -104,4 +105,11 @@ plt.show()
 
 #to save the plot after its generated
 plt.savefig("spectrum.png", dpi=300)
+
+# ============================
+# NEW LOOP: Process all filtered peptides
+# ============================
+for i, (peptide, peptide_mass) in enumerate(filtered_peptides):
+    print(f"\nPeptide {i+1}: {peptide}")
+    print(f"Monoisotopic Mass: {peptide_mass:.4f} Da")
 
