@@ -1,6 +1,10 @@
 #pyteomics_demo.py
 from pyteomics import parser, mass
 import matplotlib.pyplot as plt
+#I added the line below as chaptgpt said, i need it to define aa_masses
+from pyteomics import mass
+
+aa_masses = mass.std_aa_mass  # dictionary of standard amino acid masses
 
 # ============================
 # 1. Define protein sequence
@@ -32,41 +36,80 @@ if not filtered_peptides:
 # ============================
 # 4. Generate b- and y-ions for first filtered peptide
 # ============================
+#All the code below I added # to 'remove' it and replaced it with the code right below , it will go through the possible peptides together in a loop instead of one by one
+for idx, (peptide, peptide_mass) in enumerate(filtered_peptides):
+    print(f"\nPeptide {idx+1}: {peptide}")
+    print(f"Monoisotopic Mass: {peptide_mass:.4f} Da")
+
+    # === Fragment ion calculation ===
+    b_ions = []
+    y_ions = []
+    for i in range(1, len(peptide)):
+        b_mass = sum(aa_masses[aa] for aa in peptide[:i]) + mass.calculate_mass(formula='H')
+        b_ions.append((f'b{i}', b_mass))
+
+        y_mass = sum(aa_masses[aa] for aa in peptide[-i:]) + mass.calculate_mass(formula='H2O') + mass.calculate_mass(formula='H')
+        y_ions.append((f'y{i}', y_mass))
+
+    # === Plot each spectrum ===
+    b_labels = [ion for ion, _ in b_ions]
+    b_mzs = [mz for _, mz in b_ions]
+    y_labels = [ion for ion, _ in y_ions]
+    y_mzs = [mz for _, mz in y_ions]
+
+    plt.figure(figsize=(12, 5))
+    plt.stem(b_mzs, [1]*len(b_mzs), basefmt=" ", linefmt="red")
+    plt.stem(y_mzs, [1]*len(y_mzs), basefmt=" ", linefmt="blue")
+
+    for mz, label in zip(b_mzs, b_labels):
+        plt.text(mz, 1.02, label, rotation=90, ha='center', va='bottom', fontsize=9, color='red')
+    for mz, label in zip(y_mzs, y_labels):
+        plt.text(mz, 1.02, label, rotation=90, ha='center', va='bottom', fontsize=9, color='blue')
+
+    plt.xlabel('m/z')
+    plt.ylabel('Relative Intensity')
+    plt.title(f"b- and y-ions for peptide {idx+1}: {peptide}")
+    plt.ylim(0, 1.2)
+    plt.tight_layout()
+    plt.show()
+
 #peptide = filtered_peptides[0][0]
 #I previously had the line above but got an error so I removed it and added the line below
 #I changed the line 
-peptide, peptide_mass = filtered_peptides[0]
-aa_masses = mass.std_aa_mass
-b_ions = []
-y_ions = []
+#peptide, peptide_mass = filtered_peptides[0]
+#aa_masses = mass.std_aa_mass
+#b_ions = []
+#y_ions = []
 
 # this is manual calculation
-for i in range(1, len(peptide)):
-    b_mass = sum(aa_masses[aa] for aa in peptide[:i]) + mass.calculate_mass(formula='H')
-    b_ions.append((f'b{i}', b_mass))
+#for i in range(1, len(peptide)):
+ #   b_mass = sum(aa_masses[aa] for aa in peptide[:i]) + mass.calculate_mass(formula='H')
+  #  b_ions.append((f'b{i}', b_mass))
 
-for i in range(1, len(peptide)):
-    y_mass = sum(aa_masses[aa] for aa in peptide[-i:]) + mass.calculate_mass(formula='H2O') + mass.calculate_mass(formula='H')
-    y_ions.append((f'y{i}', y_mass))
+#for i in range(1, len(peptide)):
+    #y_mass = sum(aa_masses[aa] for aa in peptide[-i:]) + mass.calculate_mass(formula='H2O') + mass.calculate_mass(formula='H')
+   # y_ions.append((f'y{i}', y_mass))
 
 # we can also use pyteomics.mass.fast_mass to perform all of these calculations for us
-def fragments(peptide, types=('b', 'y'), maxcharge=1): # from https://pyteomics.readthedocs.io/en/latest/examples/example_msms.html
-    """
-    The function generates all possible m/z for fragments of types
-    `types` and of charges from 1 to `maxharge`.
-    """
-    for i in range(1, len(peptide)):
-        for ion_type in types:
-            for charge in range(1, maxcharge+1):
-                if ion_type[0] in 'abc':
-                    yield mass.fast_mass(
-                            peptide[:i], ion_type=ion_type, charge=charge)
-                else:
-                    yield mass.fast_mass(
-                            peptide[i:], ion_type=ion_type, charge=charge)
+#def fragments(peptide, types=('b', 'y'), maxcharge=1): # from https://pyteomics.readthedocs.io/en/latest/examples/example_msms.html
+    #"""
+    #The function generates all possible m/z for fragments of types
+    #`types` and of charges from 1 to `maxharge`.
+    #"""
+    #for i in range(1, len(peptide)):
+        #for ion_type in types:
+            #for charge in range(1, maxcharge+1):
+                #if ion_type[0] in 'abc':
+                  #  yield mass.fast_mass(
+                 #           peptide[:i], ion_type=ion_type, charge=charge)
+                #else:
+               #     yield mass.fast_mass(
+               #             peptide[i:], ion_type=ion_type, charge=charge)
+                            
+                            
 #from chatgpt
-print(f"\nPeptide: {peptide}")
-print(f"Monoisotopic Mass: {peptide_mass:.4f} Da")
+#print(f"\nPeptide: {peptide}")
+#print(f"Monoisotopic Mass: {peptide_mass:.4f} Da")
     
 # ============================
 # 5. Plot spectrum nicely
