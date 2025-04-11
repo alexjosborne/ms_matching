@@ -72,6 +72,8 @@ for idx, (peptide, peptide_mass) in enumerate(filtered_peptides):
     plt.ylim(0, 1.2)
     plt.tight_layout()
     plt.show()
+    #To save the plots
+    plt.savefig(f"spectrum_peptide_{idx+1}.png", dpi=300)
 
 #peptide = filtered_peptides[0][0]
 #I previously had the line above but got an error so I removed it and added the line below
@@ -115,44 +117,90 @@ for idx, (peptide, peptide_mass) in enumerate(filtered_peptides):
 # 5. Plot spectrum nicely
 # ============================
 # Separate b and y
-b_labels = [ion for ion, _ in b_ions]
-b_mzs = [mz for _, mz in b_ions]
+#b_labels = [ion for ion, _ in b_ions]
+#b_mzs = [mz for _, mz in b_ions]
 # b_mzs_2 = fragments(peptide, 'b') # this should match b_mzs
-y_labels = [ion for ion, _ in y_ions]
-y_mzs = [mz for _, mz in y_ions]
+#y_labels = [ion for ion, _ in y_ions]
+#y_mzs = [mz for _, mz in y_ions]
 
-plt.figure(figsize=(12, 5))
+#plt.figure(figsize=(12, 5))
 
 # Plot stems
-markerline, stemlines, baseline = plt.stem(b_mzs, [1]*len(b_mzs), basefmt=" ", linefmt="red")
-plt.setp(markerline, visible=False)  # Hide dots
-markerline, stemlines, baseline = plt.stem(y_mzs, [1]*len(y_mzs), basefmt=" ", linefmt="blue")
-plt.setp(markerline, visible=False)  # Hide dots
+#markerline, stemlines, baseline = plt.stem(b_mzs, [1]*len(b_mzs), basefmt=" ", linefmt="red")
+#plt.setp(markerline, visible=False)  # Hide dots
+#markerline, stemlines, baseline = plt.stem(y_mzs, [1]*len(y_mzs), basefmt=" ", linefmt="blue")
+#plt.setp(markerline, visible=False)  # Hide dots
 
 # Annotate ions above each stem
 # Annotate
-for mz, label in zip(b_mzs, b_labels):
-    plt.text(mz, 1.02, label, rotation=90, ha='center', va='bottom', fontsize=9, color='red')
+#for mz, label in zip(b_mzs, b_labels):
+ #   plt.text(mz, 1.02, label, rotation=90, ha='center', va='bottom', fontsize=9, color='red')
 
-for mz, label in zip(y_mzs, y_labels):
-    plt.text(mz, 1.02, label, rotation=90, ha='center', va='bottom', fontsize=9, color='blue')
+#for mz, label in zip(y_mzs, y_labels):
+ #   plt.text(mz, 1.02, label, rotation=90, ha='center', va='bottom', fontsize=9, color='blue')
 
 
 
-plt.xlabel('m/z')
-plt.ylabel('Relative Intensity')
-plt.title(f"Theoretical b- and y-ions for peptide: {peptide}")
-plt.ylim(0, 1.2)
-plt.tight_layout()
-plt.show()
+#plt.xlabel('m/z')
+#plt.ylabel('Relative Intensity')
+#plt.title(f"Theoretical b- and y-ions for peptide: {peptide}")
+#plt.ylim(0, 1.2)
+#plt.tight_layout()
+#plt.show()
 
 #to save the plot after its generated
-plt.savefig("spectrum.png", dpi=300)
+#plt.savefig("spectrum.png", dpi=300)
 
 # ============================
 # NEW LOOP: Process all filtered peptides
 # ============================
-for i, (peptide, peptide_mass) in enumerate(filtered_peptides):
-    print(f"\nPeptide {i+1}: {peptide}")
-    print(f"Monoisotopic Mass: {peptide_mass:.4f} Da")
+#for i, (peptide, peptide_mass) in enumerate(filtered_peptides):
+ #   print(f"\nPeptide {i+1}: {peptide}")
+  #  print(f"Monoisotopic Mass: {peptide_mass:.4f} Da")
 
+# ============================
+#NEW
+#5. Function: make_fragments
+# ===========================================
+def make_fragments(peptide, types=('b', 'y'), maxcharge=1):
+    """
+    Generate all possible m/z for fragments of types
+    `types` and of charges from 1 to `maxcharge`.
+    """
+    for i in range(1, len(peptide)):
+        for ion_type in types:
+            for charge in range(1, maxcharge + 1):
+                if ion_type[0] in 'abc':
+                    yield mass.fast_mass(peptide[:i], ion_type=ion_type, charge=charge)
+                else:
+                    yield mass.fast_mass(peptide[i:], ion_type=ion_type, charge=charge)
+
+# ===========================================
+# 6. Function: do_match 
+# ===========================================
+def do_match(peptide_sequence, raw_mz, error_tol=20, error_tol_units="ppm", verbose=True, **kwargs):
+    """
+    Match a peptide sequence to raw m/z data.
+    Parameters:
+    - peptide_sequence: str
+    - raw_mz: dict with "m/z array" and "intensity array"
+    - error_tol: float
+    - error_tol_units: 'ppm' or 'Da'
+    """
+    if error_tol_units not in ("ppm", "Da"):
+        raise ValueError("error_tol_units must be one of ('ppm', 'Da')")
+
+    mz_array = raw_mz.get("m/z array", [])
+    if error_tol_units == "ppm":
+        error_tol = error_tol * 1e-6 * sum(mz_array)/len(mz_array)
+
+    theo_fragments = list(make_fragments(peptide_sequence))
+    matched = []
+
+    for theo_mz in theo_fragments:
+        for obs_mz in mz_array:
+            if abs(theo_mz - obs_mz) <= error_tol:
+                matched.append((theo_mz, obs_mz))
+                if verbose:
+                    print(f"Matched theo {theo_mz:.4f} with obs {obs_mz:.4f}")
+    return matched
